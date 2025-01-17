@@ -1,51 +1,128 @@
-# Lambda Image Resizer
+# AWS Lambda Image Resizer
 
-A Node.js AWS Lambda function that automatically resizes images uploaded to S3.
+A serverless function that automatically resizes images uploaded to an S3 bucket. When an image is uploaded to the `original-images/` folder, this Lambda function creates a resized version (300x300) in the `resized-images/` folder.
 
-## Setup
+## Features
 
-1. Create an AWS Lambda function
-2. Set up an S3 bucket trigger
-3. Configure environment variables in Lambda:
-   ```
-   S3_BUCKET=your-bucket-name
-   ```
+- Automatic image resizing on S3 upload
+- Maintains original image aspect ratio
+- Processes images up to 300x300 pixels
+- Preserves original content type
+- Error handling and logging
+
+## Prerequisites
+
+- AWS Account
+- AWS CLI configured
+- Node.js installed
+- S3 bucket with appropriate permissions
+
+## Dependencies
+
+```json
+{
+  "dependencies": {
+    "@aws-sdk/client-s3": "^latest",
+    "sharp": "^latest"
+  }
+}
+```
 
 ## Installation
 
 ```bash
+# Install dependencies
 npm install
-```
-
-## Local Development
-
-1. Install dependencies
-2. Create `.env` file with required variables
-3. Run tests: `npm test`
-
-## Deployment
-
-Deploy to AWS Lambda using:
-
-```bash
-npm run deploy
 ```
 
 ## Configuration
 
-The function processes images with the following settings:
-- Max width: 800px
-- Supported formats: JPG, PNG
-- Output format: JPG
-- Quality: 80%
-
-## File Structure
-
+The function uses the following constants:
+```javascript
+const ORIGINAL_PREFIX = "original-images/";
+const RESIZED_PREFIX = "resized-images/";
 ```
-├── src/
-│   ├── index.js          # Main Lambda handler
-│   └── imageProcessor.js # Image processing logic
-├── tests/
-├── package.json
-└── README.md
+
+S3 bucket structure:
+```
+your-bucket/
+├── original-images/    # Upload original images here
+└── resized-images/    # Resized images appear here
+```
+
+## S3 Trigger Setup
+
+1. Create an S3 bucket trigger for your Lambda function
+2. Configure the trigger to respond to `ObjectCreated` events
+3. Set the prefix filter to `original-images/`
+
+## IAM Permissions
+
+The Lambda function requires these S3 permissions:
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::your-bucket-name/original-images/*",
+        "arn:aws:s3:::your-bucket-name/resized-images/*"
+      ]
+    }
+  ]
+}
+```
+
+## Usage
+
+1. Upload an image to the `original-images/` folder in your S3 bucket
+2. The Lambda function automatically triggers
+3. A resized version appears in the `resized-images/` folder
+
+## Response Format
+
+Success response:
+```json
+{
+  "statusCode": 200,
+  "body": {
+    "message": "Image resized and uploaded successfully!",
+    "resizedKey": "resized-images/your-image.jpg"
+  }
+}
+```
+
+Error response:
+```json
+{
+  "statusCode": 500,
+  "body": {
+    "message": "Failed to resize image",
+    "error": "Error details..."
+  }
+}
+```
+
+## Error Handling
+
+The function includes error handling for:
+- Invalid file locations
+- Image processing failures
+- S3 operation failures
+
+## Deployment
+
+```bash
+# Zip the function and dependencies
+zip -r function.zip .
+
+# Deploy to AWS Lambda
+aws lambda update-function-code \
+  --function-name YOUR_FUNCTION_NAME \
+  --zip-file fileb://function.zip
 ```
